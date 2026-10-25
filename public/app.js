@@ -162,6 +162,7 @@ $('#qrMake').addEventListener('click', async () => {
   const src = '/qr?data=' + encodeURIComponent(text) + '&scale=9';
   $('#qrImg2').src = src;
   $('#qrDl').href = src;
+  $('#qrPlaceholder').hidden = true;
   $('#qrOut').hidden = false;
 });
 

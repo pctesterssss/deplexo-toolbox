@@ -4,175 +4,218 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Toolbox — ссылки, QR, передача</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Unbounded:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="data:,">
 </head>
 <body>
-<header>
-  <div class="brand">🧰 Toolbox</div>
-  <nav>
-    <button class="tab active" data-tab="links">Ссылки</button>
-    <button class="tab" data-tab="qr">QR</button>
-    <button class="tab" data-tab="xfer">Передача</button>
-    <button class="tab" data-tab="auth">Доступ</button>
-  </nav>
+<header class="masthead">
+  <div class="masthead-inner">
+    <a class="brand" href="/" aria-label="Toolbox — на главную">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="brand-text">Toolbox<span class="brand-sub">Ссылки, QR и передача</span></span>
+    </a>
+    <nav class="tabs" aria-label="Разделы">
+      <button class="tab active" data-tab="links">Ссылки</button>
+      <button class="tab" data-tab="qr">QR</button>
+      <button class="tab" data-tab="xfer">Передача</button>
+      <button class="tab" data-tab="auth">Доступ</button>
+    </nav>
+  </div>
 </header>
 
 <main>
-  <!-- ССЫЛКИ -->
-  <section id="view-links" class="view active">
-    <div class="card">
-      <h1>Короткие ссылки</h1>
-      <p class="muted">Сокращайте URL, считайте переходы, показывайте QR.</p>
-      <form id="shortForm" class="row">
+  <div class="sheet">
+
+    <!-- ССЫЛКИ -->
+    <section id="view-links" class="view active" aria-labelledby="linksTitle">
+      <div class="view-head">
+        <h1 id="linksTitle">Короткие ссылки</h1>
+        <p>Сокращайте адреса, считайте переходы и сразу получайте QR для пересылки.</p>
+      </div>
+      <form id="shortForm" class="field-row">
         <input id="shortUrl" type="url" placeholder="https://example.com/очень-длинный-адрес" required>
         <button class="btn primary" type="submit">Сократить</button>
       </form>
       <div id="linkList" class="list"></div>
-    </div>
-  </section>
+    </section>
 
-  <!-- QR -->
-  <section id="view-qr" class="view">
-    <div class="card">
-      <h1>QR-код для текста или URL</h1>
-      <textarea id="qrText" rows="4" placeholder="Любой текст, ссылка, Wi-Fi-пароль…"></textarea>
-      <div class="row">
-        <button id="qrMake" class="btn primary">Сделать QR</button>
+    <!-- QR -->
+    <section id="view-qr" class="view" aria-labelledby="qrTitle">
+      <div class="view-head">
+        <h1 id="qrTitle">QR без лишних шагов</h1>
+        <p>Вставьте ссылку или текст — получите готовую картинку для чата, печати или экрана.</p>
       </div>
-      <div id="qrOut" class="qrbox" hidden>
-        <img id="qrImg2" alt="QR">
-        <a id="qrDl" class="btn ghost" download="qr.png" target="_blank">Скачать PNG</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ПЕРЕДАЧА -->
-  <section id="view-xfer" class="view">
-    <div id="xferSetup" class="card">
-      <h1>Передача между устройствами</h1>
-      <p class="muted">Откройте сервис на обоих устройствах (браузер, без установки ПО), соедините по коду или QR.
-      Между устройствами одной сети файлы идут напрямую (WebRTC). Данные эфемерные: сообщения и файлы стираются при закрытии комнаты.</p>
-      <div class="row">
-        <label class="lbl">Ваше имя на этом устройстве</label>
-        <div class="row">
-          <input id="xferName" placeholder="Ноутбук / Телефон…">
-          <button id="xferNameRand" class="btn ghost" type="button" title="Случайное имя">🎲</button>
+      <div class="qr-grid">
+        <div class="qr-input">
+          <label class="lbl" for="qrText">Текст или ссылка</label>
+          <textarea id="qrText" rows="7" placeholder="Ссылка, текст, Wi-Fi-пароль…"></textarea>
+          <div class="field-row">
+            <button id="qrMake" class="btn primary">Сделать QR</button>
+          </div>
+          <p class="hint">Картинка отдаётся в PNG и работает без интернета после скачивания.</p>
+        </div>
+        <div id="qrPlaceholder" class="qr-placeholder">
+          <div class="qr-empty" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <p>Здесь появится QR-код.</p>
+        </div>
+        <div id="qrOut" class="qrbox" hidden>
+          <img id="qrImg2" alt="QR-код">
+          <a id="qrDl" class="btn ghost" download="qr.png" target="_blank">Скачать PNG</a>
         </div>
       </div>
-      <div class="split">
-        <div class="subcard">
-          <h2>Создать комнату</h2>
-          <button id="xferCreate" class="btn primary">Создать</button>
+    </section>
+
+    <!-- ПЕРЕДАЧА -->
+    <section id="view-xfer" class="view" aria-labelledby="xferTitle">
+      <div id="xferSetup">
+        <div class="view-head">
+          <h1 id="xferTitle">Передача между устройствами</h1>
+          <p>Оба устройства открывают сайт в браузере. Соедините их кодом или QR — без установки приложений.</p>
         </div>
-        <div class="subcard">
-          <h2>Присоединиться</h2>
-          <form id="xferJoinForm" class="row">
-            <input id="xferCode" placeholder="Код из 6 символов" autocomplete="off" maxlength="6">
-            <button class="btn primary" type="submit">Войти</button>
-          </form>
+
+        <div class="name-field">
+          <label class="lbl" for="xferName">Имя этого устройства</label>
+          <div class="field-row">
+            <input id="xferName" placeholder="Ноутбук / Телефон…">
+            <button id="xferNameRand" class="btn ghost" type="button" title="Случайное имя">Случайное</button>
+          </div>
+        </div>
+
+        <div class="xfer-grid">
+          <div class="route-card route-card-create">
+            <h2>Создать комнату</h2>
+            <p class="small">Получите код и QR. Второе устройство подключится с камеры или по коду.</p>
+            <button id="xferCreate" class="btn primary">Создать комнату</button>
+          </div>
+          <div class="route-card route-card-join">
+            <h2>Присоединиться</h2>
+            <p class="small">Введите код из шести символов с другого устройства.</p>
+            <form id="xferJoinForm" class="field-row">
+              <input id="xferCode" placeholder="код из 6 символов" autocomplete="off" maxlength="6">
+              <button class="btn secondary" type="submit">Войти</button>
+            </form>
+          </div>
+        </div>
+
+        <p class="note-strip">В одной сети файлы идут напрямую между браузерами. Если прямой канал не пробивается, файл временно проходит через сервер комнаты. Комната живёт до 6 часов, данные стираются после закрытия.</p>
+      </div>
+
+      <div id="xferActive" hidden>
+        <div class="roomhead">
+          <div class="room-tag">
+            <span class="lbl">Комната</span>
+            <span id="xferRoomCode" class="code">—</span>
+          </div>
+          <span class="grow"></span>
+          <button id="xferCopyInv" class="btn ghost">Копировать приглашение</button>
+          <button id="xferLeave" class="btn ghost danger">Выйти</button>
+        </div>
+
+        <div class="invite">
+          <img id="xferQr" alt="QR приглашения">
+          <div class="invite-copy">
+            <h2>Подключение по QR</h2>
+            <p class="small">Отсканируйте камерой на другом устройстве или откройте ссылку и введите код.</p>
+          </div>
+        </div>
+
+        <div id="xferMembers" class="chips"></div>
+
+        <div class="section-head"><h2>Сообщения</h2><span class="hint">Текст, ссылки, пароли</span></div>
+        <div id="msgList" class="msgs"></div>
+        <form id="msgForm" class="field-row">
+          <input id="msgText" placeholder="Сообщение, ссылка, пароль…">
+          <button class="btn primary" type="submit">Отправить</button>
+        </form>
+
+        <div class="section-head"><h2>Файлы</h2><span class="hint">до 100 МБ на файл</span></div>
+        <div id="dropZone" class="dropzone">
+          <div>Перетащите файлы сюда или</div>
+          <button class="btn" type="button" id="fileBtn">Выбрать файлы</button>
+          <input id="fileInput" type="file" multiple hidden>
+          <div class="small">Получателям: <span id="fileTargets"></span></div>
+        </div>
+        <div id="progList" class="list"></div>
+        <div id="fileList" class="list"></div>
+        <div id="recvList" class="list"></div>
+      </div>
+    </section>
+
+    <!-- ДОСТУП -->
+    <section id="view-auth" class="view" aria-labelledby="authTitle">
+      <div class="view-head">
+        <h1 id="authTitle">Доступ</h1>
+        <p>Главная и короткие ссылки открыты. Защита включается только для QR и комнат передачи.</p>
+      </div>
+
+      <div class="protect-panel">
+        <label class="check protect" for="authProtect">
+          <input type="checkbox" id="authProtect">
+          <span>
+            <strong>Защита QR и комнат</strong>
+            <small>Когда включено, для QR-кодов и передачи нужен вход на доверенном устройстве.</small>
+          </span>
+        </label>
+        <div id="authProtectMsg" class="hint"></div>
+        <div id="protectSetup" class="setup-box" hidden>
+          <p class="small">Задайте мастер-пароль. Это устройство станет доверенным и сразу получит доступ.</p>
+          <div class="field-row">
+            <input id="protectPass" type="password" placeholder="Мастер-пароль (мин. 6)">
+            <button id="protectEnable" class="btn primary">Задать пароль и включить</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div id="xferActive" class="card" hidden>
-      <div class="roomhead">
-        <span class="muted">Комната</span>
-        <span id="xferRoomCode" class="code">—</span>
-        <span class="grow"></span>
-        <button id="xferCopyInv" class="btn ghost">Копировать ссылку-приглашение</button>
-        <button id="xferLeave" class="btn ghost danger">Выйти</button>
-      </div>
-      <div class="invite">
-        <img id="xferQr" alt="QR приглашения">
-        <div class="muted small">Отсканируйте камерой на другом устройстве,<br>или откройте ссылку и введите код</div>
-      </div>
-      <div id="xferMembers" class="chips"></div>
+      <div id="authSelf" class="status-line">Загрузка…</div>
 
-      <h2>Сообщения</h2>
-      <div id="msgList" class="msgs"></div>
-      <form id="msgForm" class="row">
-        <input id="msgText" placeholder="Сообщение, ссылка, пароль…">
-        <button class="btn primary" type="submit">Отправить</button>
-      </form>
-
-      <h2>Файлы</h2>
-      <div id="dropZone" class="dropzone">
-        <div>Перетащите файлы сюда или</div>
-        <button class="btn" type="button" id="fileBtn">Выбрать</button>
-        <input id="fileInput" type="file" multiple hidden>
-        <div class="muted small">Получателям: <span id="fileTargets"></span></div>
-      </div>
-      <div id="progList" class="list"></div>
-      <div id="fileList" class="list"></div>
-      <div id="recvList" class="list"></div>
-      <p class="muted small">Один файл до ~100 МБ. В одной сети — быстрая прямая передача (P2P); если напрямую не пробивается — файл временно резервируется на сервере комнаты.</p>
-    </div>
-  </section>
-
-  <!-- ДОСТУП -->
-  <section id="view-auth" class="view">
-    <div class="card">
-      <h1>Доступ</h1>
-      <p class="muted small">Главная страница и короткие ссылки открыты. Защита включается только для QR-кодов и комнат передачи — тумблером ниже.</p>
-
-      <h2>Защита QR и комнат</h2>
-      <label class="check"><input type="checkbox" id="authProtect"> Требовать вход для QR-кодов и комнат передачи</label>
-      <div id="authProtectMsg" class="muted small"></div>
-      <div id="protectSetup" class="subcard" hidden>
-        <div class="muted small">Чтобы включить защиту, задайте мастер-пароль. Это устройство станет доверенным.</div>
-        <div class="row">
-          <input id="protectPass" type="password" placeholder="Мастер-пароль (мин. 6)">
-          <button id="protectEnable" class="btn primary">Задать пароль и включить</button>
-        </div>
-      </div>
-
-      <div id="authSelf" class="item muted">Загрузка…</div>
-
-      <div id="authLocked" hidden>
-        <p class="muted small">Управление доступом откроется после входа.</p>
-        <div class="row"><button id="authLoginBtn" class="btn primary">Войти</button></div>
+      <div id="authLocked" class="locked-panel" hidden>
+        <p class="small">Управление доступом откроется после входа.</p>
+        <button id="authLoginBtn" class="btn primary">Войти</button>
       </div>
 
       <div id="authManage">
-      <h2>Способы входа</h2>
-      <div class="split">
-        <div class="subcard">
-          <h3>Мастер-пароль</h3>
-          <div class="row">
-            <input id="authPassNew" type="password" placeholder="Новый пароль (мин. 6)">
-            <button id="authPassSave" class="btn">Сменить</button>
+        <div class="section-head"><h2>Способы входа</h2></div>
+        <div class="split">
+          <div class="subcard">
+            <h3>Мастер-пароль</h3>
+            <div class="field-row">
+              <input id="authPassNew" type="password" placeholder="Новый пароль (мин. 6)">
+              <button id="authPassSave" class="btn">Сменить</button>
+            </div>
+            <div id="authPassMsg" class="hint"></div>
           </div>
-          <div id="authPassMsg" class="muted small"></div>
-        </div>
-        <div class="subcard">
-          <h3>PIN-код</h3>
-          <div class="row">
-            <input id="authPinVal" inputmode="numeric" placeholder="4–12 цифр">
-            <button id="authPinSave" class="btn">Включить</button>
-            <button id="authPinOff" class="btn ghost">Выключить</button>
+          <div class="subcard">
+            <h3>PIN-код</h3>
+            <div class="field-row">
+              <input id="authPinVal" inputmode="numeric" placeholder="4–12 цифр">
+              <button id="authPinSave" class="btn">Включить</button>
+              <button id="authPinOff" class="btn ghost">Выключить</button>
+            </div>
+            <div id="authPinState" class="hint"></div>
           </div>
-          <div id="authPinState" class="muted small"></div>
         </div>
+        <label class="check"><input type="checkbox" id="authApproval"> Подтверждение новых устройств с доверенного устройства</label>
+
+        <div class="section-head"><h2>Запросы на доступ <span id="pendingCount" class="badge"></span></h2></div>
+        <div id="pendingList" class="list"></div>
+
+        <div class="section-head"><h2>Одноразовые приглашения</h2><span class="hint">живут 10 минут</span></div>
+        <div class="field-row"><button id="authInvite" class="btn">Создать QR или ссылку</button></div>
+        <div id="inviteList" class="list"></div>
+
+        <div class="section-head"><h2>Доверенные устройства</h2></div>
+        <div id="deviceList" class="list"></div>
+        <div class="field-row"><button id="authLeave" class="btn ghost danger">Выйти из доверенных на этом устройстве</button></div>
       </div>
-      <label class="check"><input type="checkbox" id="authApproval"> Подтверждение новых устройств с доверенного устройства</label>
+    </section>
 
-      <h2>Запросы на доступ <span id="pendingCount" class="badge"></span></h2>
-      <div id="pendingList" class="list"></div>
-
-      <h2>Одноразовые приглашения</h2>
-      <div class="row"><button id="authInvite" class="btn">Создать QR/ссылку (10 мин)</button></div>
-      <div id="inviteList" class="list"></div>
-
-      <h2>Доверенные устройства</h2>
-      <div id="deviceList" class="list"></div>
-      <div class="row"><button id="authLeave" class="btn ghost danger">Выйти из доверенных на этом устройстве</button></div>
-      </div>
-    </div>
-  </section>
+  </div>
 </main>
 
-<footer class="muted small">Toolbox · эфемерный обмен данными · хостится на Deplexo</footer>
+<footer class="foot">Toolbox — эфемерный обмен данными. Хостинг Deplexo.</footer>
 
 <div id="lock" class="lockback" hidden><div class="lockcard" id="lockCard"></div></div>
 
