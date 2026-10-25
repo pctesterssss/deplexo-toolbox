@@ -114,9 +114,27 @@
   <section id="view-auth" class="view">
     <div class="card">
       <h1>Доступ</h1>
-      <p class="muted small">Базoвая защита сервиса: мастер-пароль, PIN, подтверждение новых устройств и одноразовые приглашения. Все настройки видны только с доверенного устройства.</p>
+      <p class="muted small">Главная страница и короткие ссылки открыты. Защита включается только для QR-кодов и комнат передачи — тумблером ниже.</p>
+
+      <h2>Защита QR и комнат</h2>
+      <label class="check"><input type="checkbox" id="authProtect"> Требовать вход для QR-кодов и комнат передачи</label>
+      <div id="authProtectMsg" class="muted small"></div>
+      <div id="protectSetup" class="subcard" hidden>
+        <div class="muted small">Чтобы включить защиту, задайте мастер-пароль. Это устройство станет доверенным.</div>
+        <div class="row">
+          <input id="protectPass" type="password" placeholder="Мастер-пароль (мин. 6)">
+          <button id="protectEnable" class="btn primary">Задать пароль и включить</button>
+        </div>
+      </div>
+
       <div id="authSelf" class="item muted">Загрузка…</div>
 
+      <div id="authLocked" hidden>
+        <p class="muted small">Управление доступом откроется после входа.</p>
+        <div class="row"><button id="authLoginBtn" class="btn primary">Войти</button></div>
+      </div>
+
+      <div id="authManage">
       <h2>Способы входа</h2>
       <div class="split">
         <div class="subcard">
@@ -149,6 +167,7 @@
       <h2>Доверенные устройства</h2>
       <div id="deviceList" class="list"></div>
       <div class="row"><button id="authLeave" class="btn ghost danger">Выйти из доверенных на этом устройстве</button></div>
+      </div>
     </div>
   </section>
 </main>
