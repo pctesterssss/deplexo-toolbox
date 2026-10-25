@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toolbox — ссылки, QR, передача</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<header>
+  <div class="brand">🧰 Toolbox</div>
+  <nav>
+    <button class="tab active" data-tab="links">Ссылки</button>
+    <button class="tab" data-tab="qr">QR</button>
+    <button class="tab" data-tab="xfer">Передача</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ССЫЛКИ -->
+  <section id="view-links" class="view active">
+    <div class="card">
+      <h1>Короткие ссылки</h1>
+      <p class="muted">Сокращайте URL, считайте переходы, показывайте QR.</p>
+      <form id="shortForm" class="row">
+        <input id="shortUrl" type="url" placeholder="https://example.com/очень-длинный-адрес" required>
+        <button class="btn primary" type="submit">Сократить</button>
+      </form>
+      <div id="linkList" class="list"></div>
+    </div>
+  </section>
+
+  <!-- QR -->
+  <section id="view-qr" class="view">
+    <div class="card">
+      <h1>QR-код для текста или URL</h1>
+      <textarea id="qrText" rows="4" placeholder="Любой текст, ссылка, Wi-Fi-пароль…"></textarea>
+      <div class="row">
+        <button id="qrMake" class="btn primary">Сделать QR</button>
+      </div>
+      <div id="qrOut" class="qrbox" hidden>
+        <img id="qrImg2" alt="QR">
+        <a id="qrDl" class="btn ghost" download="qr.png" target="_blank">Скачать PNG</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ПЕРЕДАЧА -->
+  <section id="view-xfer" class="view">
+    <div id="xferSetup" class="card">
+      <h1>Передача между устройствами</h1>
+      <p class="muted">Откройте сервис на обоих устройствах (браузер, без установки ПО), соедините по коду или QR.
+      Файлы между устройствами одной сети идут напрямую (WebRTC), иначе — через короткий облачный ретранслятор.
+      Данные эфемерные: сообщения и файлы стираются при закрытии комнаты.</p>
+      <div class="row">
+        <label class="lbl">Ваше имя на этом устройстве</label>
+        <div class="row">
+          <input id="xferName" placeholder="Ноутбук / Телефон…">
+          <button id="xferNameRand" class="btn ghost" type="button" title="Случайное имя">🎲</button>
+        </div>
+      </div>
+      <div class="split">
+        <div class="subcard">
+          <h2>Создать комнату</h2>
+          <button id="xferCreate" class="btn primary">Создать</button>
+        </div>
+        <div class="subcard">
+          <h2>Присоединиться</h2>
+          <form id="xferJoinForm" class="row">
+            <input id="xferCode" placeholder="Код из 6 символов" autocomplete="off" maxlength="6">
+            <button class="btn primary" type="submit">Войти</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="xferActive" class="card" hidden>
+      <div class="roomhead">
+        <span class="muted">Комната</span>
+        <span id="xferRoomCode" class="code">—</span>
+        <span class="grow"></span>
+        <button id="xferCopyInv" class="btn ghost">Копировать ссылку-приглашение</button>
+        <button id="xferLeave" class="btn ghost danger">Выйти</button>
+      </div>
+      <div class="invite">
+        <img id="xferQr" alt="QR приглашения">
+        <div class="muted small">Отсканируйте камерой на другом устройстве,<br>или откройте ссылку и введите код</div>
+      </div>
+      <div id="xferMembers" class="chips"></div>
+
+      <h2>Сообщения</h2>
+      <div id="msgList" class="msgs"></div>
+      <form id="msgForm" class="row">
+        <input id="msgText" placeholder="Сообщение, ссылка, пароль…">
+        <button class="btn primary" type="submit">Отправить</button>
+      </form>
+
+      <h2>Файлы</h2>
+      <div id="dropZone" class="dropzone">
+        <div>Перетащите файлы сюда или</div>
+        <button class="btn" type="button" id="fileBtn">Выбрать</button>
+        <input id="fileInput" type="file" multiple hidden>
+        <div class="muted small">Получателям: <span id="fileTargets"></span></div>
+      </div>
+      <div id="progList" class="list"></div>
+      <div id="fileList" class="list"></div>
+      <div id="recvList" class="list"></div>
+      <p class="muted small">Один файл до ~100 МБ. В одной сети — быстрая прямая передача (P2P); если устройств разделяет интернет — файл резервируется на сервер на время жизни комнаты.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="muted small">Toolbox · эфемерный обмен данными · хостится на Deplexo</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
