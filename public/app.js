@@ -535,13 +535,249 @@ async function sendFiles(fileList) {
   }
 }
 
-/* ---------- старт ---------- */
-loadLinks();
-
-const invitedCode = new URLSearchParams(location.search).get('code');
-if (invitedCode) {
-  history.replaceState(null, '', '/');
-  showTab('xfer');
-  $('#xferCode').value = invitedCode;
-  enterRoom(invitedCode.toLowerCase()).catch(() => {});
+/* ---------- доступ: экран блокировки и вкладка ---------- */
+function finishEntry() {
+  const pending = new URLSearchParams(location.search).get('code') || '';
+  if (pending) sessionStorage.setItem('pendingRoom', pending);
+  location.replace('/');
 }
+
+function renderLock(st) {
+  const lock = $('#lock');
+  const card = $('#lockCard');
+  lock.hidden = false;
+  card.replaceChildren();
+
+  card.appendChild(el('h1', null, '🧰 Toolbox'));
+  card.appendChild(el('div', 'lockhint', st.needsSetup
+    ? 'Первая настройка. Задайте мастер-пароль — это устройство станет доверенным администратором.'
+    : 'Сервис защищён. Войдите, чтобы продолжить.'));
+
+  const err = el('div', 'lockerr');
+  card.appendChild(err);
+
+  const nameInp = document.createElement('input');
+  nameInp.placeholder = 'Имя этого устройства (необязательно)';
+  nameInp.value = localStorage.getItem('xferName') || '';
+  card.appendChild(nameInp);
+
+  const doLogin = async (method, value) => {
+    try {
+      await api('/api/auth/login', { json: { method, value, name: nameInp.value || undefined } });
+      finishEntry();
+    } catch (e) { err.textContent = e.message; }
+  };
+
+  const doRedeem = async (code) => {
+    try {
+      await api('/api/auth/redeem', { json: { code, name: nameInp.value || 'По приглашению' } });
+      finishEntry();
+    } catch (e) { err.textContent = e.message; }
+  };
+
+  if (st.needsSetup) {
+    const p1 = document.createElement('input');
+    p1.type = 'password'; p1.placeholder = 'Мастер-пароль (мин. 6 символов)';
+    const p2 = document.createElement('input');
+    p2.type = 'password'; p2.placeholder = 'Повторите пароль';
+    const b = el('button', 'btn primary', 'Задать пароль и войти');
+    b.addEventListener('click', async () => {
+      if (p1.value.length < 6) { err.textContent = 'Пароль минимум 6 символов'; return; }
+      if (p1.value !== p2.value) { err.textContent = 'Пароли не совпадают'; return; }
+      try {
+        await api('/api/auth/setup', { json: { pass: p1.value, name: nameInp.value || 'Моё устройство' } });
+        finishEntry();
+      } catch (e) { err.textContent = e.message; }
+    });
+    card.appendChild(p1); card.appendChild(p2); card.appendChild(b);
+    return;
+  }
+
+  if (st.methods && st.methods.password) {
+    const p = document.createElement('input');
+    p.type = 'password'; p.placeholder = 'Мастер-пароль';
+    const b = el('button', 'btn primary', 'Войти');
+    b.addEventListener('click', () => doLogin('password', p.value));
+    p.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin('password', p.value); });
+    card.appendChild(p); card.appendChild(b);
+  }
+
+  if (st.methods && st.methods.pin) {
+    const p = document.createElement('input');
+    p.inputMode = 'numeric'; p.placeholder = 'PIN-код';
+    const b = el('button', 'btn', 'Войти по PIN');
+    b.addEventListener('click', () => doLogin('pin', p.value.trim()));
+    card.appendChild(p); card.appendChild(b);
+  }
+
+  if (st.methods && st.methods.approval) {
+    if (st.methods.password || st.methods.pin) card.appendChild(el('div', 'lockhint', 'или'));
+    const b = el('button', 'btn', 'Запросить доступ с доверенного устройства');
+    b.addEventListener('click', () => approveFlow(nameInp.value, err, card));
+    card.appendChild(b);
+  }
+
+  const row = el('div', 'row');
+  const codeInp = document.createElement('input');
+  codeInp.placeholder = 'Код-приглашение';
+  const codeBtn = el('button', 'btn', 'По коду');
+  codeBtn.addEventListener('click', () => doRedeem(codeInp.value.trim()));
+  row.appendChild(codeInp); row.appendChild(codeBtn);
+  card.appendChild(row);
+  card.appendChild(el('div', 'lockhint', 'Нет способов входа? Откройте вкладку «Доступ» на доверенном устройстве и создайте приглашение.'));
+
+  const autoCode = new URLSearchParams(location.search).get('auth');
+  if (autoCode) { codeInp.value = autoCode; doRedeem(autoCode); }
+}
+
+async function approveFlow(name, err, card) {
+  try {
+    const r = await api('/api/auth/request', { json: { name: name || 'Новое устройство' } });
+    const box = el('div', 'item');
+    box.appendChild(el('span', 'spinner'));
+    box.appendChild(el('span', null, 'Ожидает подтверждения… Откройте «Доступ» на доверенном устройстве.'));
+    card.appendChild(box);
+    const timer = setInterval(async () => {
+      try {
+        const c = await api('/api/auth/claim', { json: { reqId: r.reqId } });
+        if (c.status === 'approved') { clearInterval(timer); finishEntry(); }
+        else if (c.status === 'denied') { clearInterval(timer); box.remove(); err.textContent = 'Запрос отклонён'; }
+        else if (c.status === 'expired') { clearInterval(timer); box.remove(); err.textContent = 'Запрос истёк — попробуйте снова'; }
+      } catch (e) { /* продолжаем ждать */ }
+    }, 2000);
+  } catch (e) { err.textContent = e.message; }
+}
+
+/* вкладка «Доступ» */
+async function refreshAuthLive() {
+  if (!$('#authSelf')) return;
+  try {
+    const o = await api('/api/auth/overview');
+    $('#authSelf').textContent = 'Это устройство: ' + (o.me ? o.me.name : '—') + ' · доверенное';
+    $('#authApproval').checked = !!o.approval;
+    $('#authPinState').textContent = o.pin ? 'PIN включён' : 'PIN выключен';
+    $('#pendingCount').textContent = o.pending.length ? String(o.pending.length) : '';
+
+    const pl = $('#pendingList');
+    pl.replaceChildren();
+    if (!o.pending.length) pl.appendChild(el('div', 'item muted', 'Новых запросов нет.'));
+    o.pending.forEach((r) => {
+      const it = el('div', 'item');
+      it.appendChild(el('span', 'linkid', r.name));
+      it.appendChild(el('span', 'meta', '· ' + (r.ua || '').slice(0, 60) + ' · ' + fmtTime(r.ts)));
+      it.appendChild(el('span', 'grow'));
+      const ok = el('button', 'btn', 'Разрешить');
+      ok.addEventListener('click', async () => {
+        try { await api('/api/auth/pending/' + r.id + '/approve', { json: {} }); refreshAuthLive(); } catch (e) {}
+      });
+      const no = el('button', 'btn ghost danger', 'Отклонить');
+      no.addEventListener('click', async () => {
+        try { await api('/api/auth/pending/' + r.id + '/deny', { json: {} }); refreshAuthLive(); } catch (e) {}
+      });
+      it.appendChild(ok); it.appendChild(no);
+      pl.appendChild(it);
+    });
+
+    const dl = $('#deviceList');
+    dl.replaceChildren();
+    o.devices.forEach((d) => {
+      const it = el('div', 'item');
+      it.appendChild(el('span', 'linkid', d.name));
+      it.appendChild(el('span', 'meta', '· актив. ' + fmtDate(d.lastSeen)));
+      if (o.me && d.id === o.me.id) it.appendChild(el('span', 'badge', 'это устройство'));
+      it.appendChild(el('span', 'grow'));
+      const rv = el('button', 'btn ghost danger', 'Отключить');
+      rv.addEventListener('click', async () => {
+        if (!confirm('Отключить устройство «' + d.name + '»?')) return;
+        try {
+          await api('/api/auth/devices/' + d.id + '/revoke', { json: {} });
+          if (o.me && d.id === o.me.id) location.reload(); else refreshAuthLive();
+        } catch (e) {}
+      });
+      it.appendChild(rv);
+      dl.appendChild(it);
+    });
+
+    const il = $('#inviteList');
+    il.replaceChildren();
+    if (!o.invites.length) il.appendChild(el('div', 'item muted', 'Активных приглашений нет.'));
+    o.invites.forEach((i) => {
+      const left = Math.max(1, Math.round((10 * 60 * 1000 - (Date.now() - i.ts)) / 60000));
+      const it = el('div', 'item');
+      it.appendChild(el('span', 'linkid', i.code));
+      it.appendChild(el('span', 'meta', '· ещё ~' + left + ' мин'));
+      it.appendChild(el('span', 'grow'));
+      const qr = el('button', 'btn ghost', 'QR');
+      qr.addEventListener('click', () => showQr(i.url, 'Приглашение (одноразовое)'));
+      const cp = el('button', 'btn ghost', 'Копировать');
+      cp.addEventListener('click', () => copyText(i.url, cp));
+      const rv = el('button', 'btn ghost danger', '✕');
+      rv.addEventListener('click', async () => {
+        try { await api('/api/auth/invites/' + i.code, { method: 'DELETE' }); refreshAuthLive(); } catch (e) {}
+      });
+      it.appendChild(qr); it.appendChild(cp); it.appendChild(rv);
+      il.appendChild(it);
+    });
+  } catch (e) { /* нет доступа — оставим как есть */ }
+}
+
+$('#authApproval').addEventListener('change', async (e) => {
+  try { await api('/api/auth/config', { json: { approval: e.target.checked } }); refreshAuthLive(); }
+  catch (err) { e.target.checked = !e.target.checked; }
+});
+$('#authPassSave').addEventListener('click', async () => {
+  const v = $('#authPassNew').value;
+  const msg = $('#authPassMsg');
+  try {
+    await api('/api/auth/config', { json: { password: { value: v } } });
+    $('#authPassNew').value = '';
+    msg.textContent = 'Пароль обновлён';
+  } catch (e) { msg.textContent = e.message; }
+});
+$('#authPinSave').addEventListener('click', async () => {
+  try {
+    await api('/api/auth/config', { json: { pin: { value: $('#authPinVal').value.trim() } } });
+    $('#authPinVal').value = '';
+    refreshAuthLive();
+  } catch (e) { $('#authPinState').textContent = e.message; }
+});
+$('#authPinOff').addEventListener('click', async () => {
+  try { await api('/api/auth/config', { json: { pin: { set: false } } }); refreshAuthLive(); } catch (e) {}
+});
+$('#authInvite').addEventListener('click', async () => {
+  try {
+    const d = await api('/api/auth/invites', { json: {} });
+    showQr(d.url, 'Одноразовое приглашение (10 минут)');
+    refreshAuthLive();
+  } catch (e) { alert(e.message); }
+});
+$('#authLeave').addEventListener('click', async () => {
+  if (!confirm('Выйти из доверенных на этом устройстве?')) return;
+  try { await api('/api/auth/leave', { json: {} }); location.reload(); } catch (e) { alert(e.message); }
+});
+
+/* ---------- старт ---------- */
+async function boot() {
+  try {
+    const st = await api('/api/auth/state');
+    if (!st.trusted) return renderLock(st);
+    $('#lock').hidden = true;
+    const invited = new URLSearchParams(location.search).get('code') || sessionStorage.getItem('pendingRoom');
+    sessionStorage.removeItem('pendingRoom');
+    if (invited) {
+      history.replaceState(null, '', '/');
+      showTab('xfer');
+      $('#xferCode').value = invited;
+      enterRoom(String(invited).toLowerCase()).catch(() => {});
+    }
+    loadLinks();
+    refreshAuthLive();
+    setInterval(() => {
+      if (!document.hidden && $('#view-auth').classList.contains('active')) refreshAuthLive();
+    }, 5000);
+  } catch (e) {
+    renderLock({ needsSetup: false, methods: {} });
+  }
+}
+
+boot();
