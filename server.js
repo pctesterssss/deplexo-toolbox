@@ -61,7 +61,12 @@ function sanitizeName(raw) {
 
 function baseUrl(req) {
   if (process.env.BASE_URL) return process.env.BASE_URL;
-  return `${req.protocol}://${req.get('host')}`;
+  const host = req.get('host') || '';
+  const forwarded = String(req.get('x-forwarded-proto') || '').split(',')[0].trim();
+  let proto = forwarded || req.protocol || 'http';
+  // За обратным прокси Deplexo запрос может приходить как http — снаружи всегда https.
+  if (proto === 'http' && !/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(host)) proto = 'https';
+  return `${proto}://${host}`;
 }
 
 function sha(s) { return crypto.createHash('sha256').update(s).digest('hex'); }
