@@ -84,7 +84,7 @@ function parseCookies(req) {
 }
 
 // ---------- контроль доступа ----------
-let auth = { admin: null, pin: null, approval: false, devices: [], invites: [], requests: [] };
+let auth = { admin: null, pin: null, approval: false, protect: false, devices: [], invites: [], requests: [] };
 try {
   const raw = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
   auth = Object.assign(auth, raw);
@@ -157,6 +157,13 @@ function issueDevice(res, devId, name) {
   return dev;
 }
 
+function requireDevice(req, res) {
+  const dev = currentDevice(req);
+  if (dev) return dev;
+  res.status(401).json({ error: 'Требуется вход', code: 'auth' });
+  return null;
+}
+
 function overviewPayload(req) {
   pruneAuth();
   const me = currentDevice(req);
@@ -170,6 +177,7 @@ function overviewPayload(req) {
       .map((r) => ({ id: r.id, name: r.name, ua: r.ua, ts: r.ts })),
     invites: auth.invites.map((i) => ({ code: i.code, ts: i.ts, url: `${baseUrl(req)}/?auth=${i.code}` })),
     approval: !!auth.approval,
+    protect: !!auth.protect,
     pin: !!auth.pin,
     admin: !!auth.admin,
   };
@@ -232,6 +240,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/healthz', (req, res) => res.json({ ok: true, links: links.length, rooms: rooms.size }));
 
 app.get('/qr', async (req, res) => {
+  if (auth.protect && !currentDevice(req)) {
+    return res.status(401).json({ error: 'Требуется вход', code: 'auth' });
+  }
   const data = String(req.query.data || '').slice(0, 2000);
   if (!data) return res.status(400).json({ error: 'Нет data' });
   const scale = Math.min(Math.max(parseInt(req.query.scale, 10) || 6, 2), 12);
@@ -272,6 +283,7 @@ app.get('/api/auth/state', (req, res) => {
     trusted: !!dev,
     me: dev ? { id: dev.id, name: dev.name } : null,
     devId,
+    protect: !!auth.protect,
     methods: { password: !!auth.admin, pin: !!auth.pin, approval: !!auth.approval },
     trustedCount: auth.devices.length,
   });
@@ -282,6 +294,8 @@ app.post('/api/auth/setup', (req, res) => {
   const pass = String((req.body && req.body.pass) || '');
   if (pass.length < 6) return res.status(400).json({ error: 'Пароль минимум 6 символов' });
   setAdminPass(pass);
+  if (req.body && req.body.protect === true) auth.protect = true;
+  saveAuth();
   const devId = ensureDevId(req, res);
   const dev = issueDevice(res, devId, (req.body && req.body.name) || 'Моё устройство');
   res.json({ ok: true, me: { id: dev.id, name: dev.name } });
@@ -364,19 +378,37 @@ app.post('/api/auth/redeem', (req, res) => {
   res.json({ ok: true, me: { id: dev.id, name: dev.name } });
 });
 
-// ===== шлюз: всё остальное под /api требует доверенного устройства =====
-app.use('/api', (req, res, next) => {
+// ===== защита только для комнат передачи (QR защищён в маршруте /qr) =====
+app.use('/api/transfer', (req, res, next) => {
+  if (!auth.protect) return next();
   if (currentDevice(req)) return next();
   res.status(401).json({ error: 'Требуется вход', code: 'auth' });
 });
 
-// ===== auth-маршруты доверенных устройств =====
+// ===== auth-маршруты =====
 app.get('/api/auth/overview', (req, res) => {
+  if (!requireDevice(req, res)) return;
   res.json(overviewPayload(req));
 });
 
 app.post('/api/auth/config', (req, res) => {
   const b = req.body || {};
+
+  // первичное включение защиты: задаём пароль и доверяем это устройство
+  if (b.protect === true && !auth.admin) {
+    const v = String((b.password && b.password.value) || '');
+    if (v.length < 6) return res.status(400).json({ error: 'Задайте мастер-пароль (мин. 6 символов)' });
+    setAdminPass(v);
+    auth.protect = true;
+    saveAuth();
+    const devId = ensureDevId(req, res);
+    const dev = issueDevice(res, devId, b.name || 'Моё устройство');
+    return res.json({ ok: true, me: { id: dev.id, name: dev.name }, protect: true });
+  }
+
+  if (!requireDevice(req, res)) return;
+
+  if (typeof b.protect === 'boolean') auth.protect = b.protect;
   if (typeof b.approval === 'boolean') auth.approval = b.approval;
   if (b.pin) {
     if (b.pin.set === false) {
@@ -398,6 +430,7 @@ app.post('/api/auth/config', (req, res) => {
 });
 
 app.post('/api/auth/pending/:id/approve', (req, res) => {
+  if (!requireDevice(req, res)) return;
   pruneAuth();
   const r = auth.requests.find((x) => x.id === req.params.id);
   if (!r || r.status !== 'pending') return res.status(404).json({ error: 'Запрос не найден' });
@@ -407,6 +440,7 @@ app.post('/api/auth/pending/:id/approve', (req, res) => {
 });
 
 app.post('/api/auth/pending/:id/deny', (req, res) => {
+  if (!requireDevice(req, res)) return;
   pruneAuth();
   const r = auth.requests.find((x) => x.id === req.params.id);
   if (!r || r.status !== 'pending') return res.status(404).json({ error: 'Запрос не найден' });
@@ -439,6 +473,7 @@ app.post('/api/auth/leave', (req, res) => {
 });
 
 app.post('/api/auth/invites', (req, res) => {
+  if (!requireDevice(req, res)) return;
   pruneAuth();
   if (auth.invites.length >= 20) return res.status(429).json({ error: 'Слишком много активных приглашений' });
   const code = randCode(8);
@@ -448,6 +483,7 @@ app.post('/api/auth/invites', (req, res) => {
 });
 
 app.delete('/api/auth/invites/:code', (req, res) => {
+  if (!requireDevice(req, res)) return;
   auth.invites = auth.invites.filter((i) => i.code !== req.params.code);
   saveAuth();
   res.json({ ok: true });
