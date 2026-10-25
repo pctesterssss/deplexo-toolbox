@@ -14,6 +14,7 @@
     <button class="tab active" data-tab="links">Ссылки</button>
     <button class="tab" data-tab="qr">QR</button>
     <button class="tab" data-tab="xfer">Передача</button>
+    <button class="tab" data-tab="auth">Доступ</button>
   </nav>
 </header>
 
@@ -51,8 +52,7 @@
     <div id="xferSetup" class="card">
       <h1>Передача между устройствами</h1>
       <p class="muted">Откройте сервис на обоих устройствах (браузер, без установки ПО), соедините по коду или QR.
-      Файлы между устройствами одной сети идут напрямую (WebRTC), иначе — через короткий облачный ретранслятор.
-      Данные эфемерные: сообщения и файлы стираются при закрытии комнаты.</p>
+      Между устройствами одной сети файлы идут напрямую (WebRTC). Данные эфемерные: сообщения и файлы стираются при закрытии комнаты.</p>
       <div class="row">
         <label class="lbl">Ваше имя на этом устройстве</label>
         <div class="row">
@@ -106,12 +106,56 @@
       <div id="progList" class="list"></div>
       <div id="fileList" class="list"></div>
       <div id="recvList" class="list"></div>
-      <p class="muted small">Один файл до ~100 МБ. В одной сети — быстрая прямая передача (P2P); если устройств разделяет интернет — файл резервируется на сервер на время жизни комнаты.</p>
+      <p class="muted small">Один файл до ~100 МБ. В одной сети — быстрая прямая передача (P2P); если напрямую не пробивается — файл временно резервируется на сервере комнаты.</p>
+    </div>
+  </section>
+
+  <!-- ДОСТУП -->
+  <section id="view-auth" class="view">
+    <div class="card">
+      <h1>Доступ</h1>
+      <p class="muted small">Базoвая защита сервиса: мастер-пароль, PIN, подтверждение новых устройств и одноразовые приглашения. Все настройки видны только с доверенного устройства.</p>
+      <div id="authSelf" class="item muted">Загрузка…</div>
+
+      <h2>Способы входа</h2>
+      <div class="split">
+        <div class="subcard">
+          <h3>Мастер-пароль</h3>
+          <div class="row">
+            <input id="authPassNew" type="password" placeholder="Новый пароль (мин. 6)">
+            <button id="authPassSave" class="btn">Сменить</button>
+          </div>
+          <div id="authPassMsg" class="muted small"></div>
+        </div>
+        <div class="subcard">
+          <h3>PIN-код</h3>
+          <div class="row">
+            <input id="authPinVal" inputmode="numeric" placeholder="4–12 цифр">
+            <button id="authPinSave" class="btn">Включить</button>
+            <button id="authPinOff" class="btn ghost">Выключить</button>
+          </div>
+          <div id="authPinState" class="muted small"></div>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="authApproval"> Подтверждение новых устройств с доверенного устройства</label>
+
+      <h2>Запросы на доступ <span id="pendingCount" class="badge"></span></h2>
+      <div id="pendingList" class="list"></div>
+
+      <h2>Одноразовые приглашения</h2>
+      <div class="row"><button id="authInvite" class="btn">Создать QR/ссылку (10 мин)</button></div>
+      <div id="inviteList" class="list"></div>
+
+      <h2>Доверенные устройства</h2>
+      <div id="deviceList" class="list"></div>
+      <div class="row"><button id="authLeave" class="btn ghost danger">Выйти из доверенных на этом устройстве</button></div>
     </div>
   </section>
 </main>
 
 <footer class="muted small">Toolbox · эфемерный обмен данными · хостится на Deplexo</footer>
+
+<div id="lock" class="lockback" hidden><div class="lockcard" id="lockCard"></div></div>
 
 <script src="/app.js"></script>
 </body>
